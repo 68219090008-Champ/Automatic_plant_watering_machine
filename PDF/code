@@ -1,0 +1,56 @@
+//รดน้ำต้นไม้อัตโนมัติ
+
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// กำหนดขาเซ็นเซอร์และรีเลย์
+int sensorPin = A0;     // เซ็นเซอร์ความชื้นดิน
+int relayPin = 8;       // รีเลย์ควบคุมปั๊มน้ำ
+
+// กำหนดค่าความชื้นที่ต้องการ (threshold) เป็นเปอร์เซ็นต์
+int thresholdPercent = 50;   // เช่น ต้องการให้ความชื้นไม่ต่ำกว่า 40%
+
+// กำหนดค่าที่วัดได้จริงจากการทดลอง (dry และ wet)
+int dryValue = 1023;   // ค่าที่อ่านได้เมื่อดินแห้งสนิท
+int wetValue = 300;    // ค่าที่อ่านได้เมื่อดินเปียกมาก (ต้องปรับตามเซ็นเซอร์จริง)
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+  lcd.begin(16, 2);          // เริ่มต้นใช้งาน LCD
+  pinMode(relayPin, OUTPUT); // ตั้งค่ารีเลย์เป็น output
+  digitalWrite(relayPin, HIGH); // ปิดปั๊มน้ำเริ่มต้น (รีเลย์ active low)
+  lcd.print("Auto Water Sys");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  int moistureRaw = analogRead(sensorPin); // อ่านค่าความชื้นจากเซ็นเซอร์
+
+  // แปลงค่าดิบเป็นเปอร์เซ็นต์
+  int moisturePercent = map(moistureRaw, dryValue, wetValue, 0, 100);
+  if (moisturePercent < 0) moisturePercent = 0;
+  if (moisturePercent > 100) moisturePercent = 100;
+
+  lcd.setCursor(0, 0);
+  lcd.print("Moisture: ");
+  lcd.print(moisturePercent);
+  lcd.print("%   ");
+
+  if (moisturePercent < thresholdPercent) {
+    // ถ้าความชื้นต่ำกว่าค่าที่กำหนด → เปิดปั๊มน้ำ
+    digitalWrite(relayPin, LOW); // เปิดปั๊มน้ำ
+    lcd.setCursor(0, 1);
+    lcd.print("Pump: ON       ");
+  } else {
+    // ถ้าความชื้นเพียงพอ → ปิดปั๊มน้ำ
+    digitalWrite(relayPin, HIGH); // ปิดปั๊มน้ำ
+    lcd.setCursor(0, 1);
+    lcd.print("Pump: OFF      ");
+  }
+
+  delay(2000); // หน่วงเวลา 2 วินาที
+}
